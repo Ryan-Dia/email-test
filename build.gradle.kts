@@ -44,7 +44,7 @@ dependencies {
     testImplementation("org.springframework.integration:spring-integration-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    implementation("jakarta.mail:jakarta.mail-api:2.1.3")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
