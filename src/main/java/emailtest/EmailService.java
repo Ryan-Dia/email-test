@@ -8,7 +8,9 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -81,12 +83,16 @@ public class EmailService {
             return;
         }
 
-        // 파싱·저장 성공 시 원본 파일 삭제
-        boolean deleted = emlFile.delete();
-        if (!deleted) {
-            log.warn("Failed to delete processed mail file: {}", emlFile.getAbsolutePath());
-        } else {
+        try {
+            Files.delete(emlFile.toPath());
             log.debug("Deleted processed mail file: {}", emlFile.getName());
+        } catch (IOException e) {
+            log.warn("Failed to delete processed mail file: {} - exists: {}, canWrite: {}, isFile: {}, Reason: {}",
+                    emlFile.getAbsolutePath(),
+                    emlFile.exists(),
+                    emlFile.canWrite(),
+                    emlFile.isFile(),
+                    e.getMessage());
         }
     }
 }
