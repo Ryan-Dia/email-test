@@ -55,10 +55,11 @@ jobs:
           script: |
             mkdir -p /home/ec2-user/app
             chown ec2-user:ec2-user /home/ec2-user/app
+            cd /home/ec2-user/app
             
             wget -O docker-compose.yml https://raw.githubusercontent.com/Ryan-Dia/email-test/main/docker-compose.yml
             
             # docker-compose 명령 실행
             docker compose down || true  
-            docker compose build mail-app
+            docker compose pull    
             docker compose up -d

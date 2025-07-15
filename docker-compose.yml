@@ -1,11 +1,6 @@
 services:
   mail-app:
-    build:
-      context: .
-      args:
-        APP_USER: app
-        APP_UID: 1001
-        APP_GID: 1001
+    image: ryandia/email-test:latest
     restart: always
     environment:
       INTEGRATION_MAILDIR: /maildir/new
@@ -14,3 +9,4 @@ services:
       - /home/ec2-user/Maildir:/maildir:rw
     ports:
       - "8080:8080"
+
