@@ -1,0 +1,6 @@
+spring:
+  profiles: docker
+
+integration:
+  file:
+    maildir: ${INTEGRATION_MAILDIR:/maildir/new}

@@ -1,0 +1,8 @@
+services:
+  mail-app:
+    # …
+    environment:
+      INTEGRATION_MAILDIR: /maildir/new
+      SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - /home/ec2-user/Maildir:/maildir:rw
