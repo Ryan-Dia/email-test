@@ -1,8 +1,18 @@
+version: "3.8"
 services:
   mail-app:
-    # …
+    build:
+      context: .
+      args:
+        APP_USER: app
+        APP_UID: 1001
+        APP_GID: 1001
+    image: bombom-mail-app:latest
+    restart: always
     environment:
       INTEGRATION_MAILDIR: /maildir/new
       SPRING_PROFILES_ACTIVE: docker
     volumes:
       - /home/ec2-user/Maildir:/maildir:rw
+    ports:
+      - "8080:8080"
