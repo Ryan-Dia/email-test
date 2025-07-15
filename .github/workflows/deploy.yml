@@ -60,5 +60,5 @@ jobs:
             
             # docker-compose 명령 실행
             docker compose down || true  
-            docker compose pull
+            docker compose build mail-app
             docker compose up -d
