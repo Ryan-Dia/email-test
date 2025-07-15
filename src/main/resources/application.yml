@@ -1,0 +1,20 @@
+spring:
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+        show-sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  datasource:
+    url: jdbc:h2:mem:attraction;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+integration:
+  file:
+    maildir: ./Maildir/new

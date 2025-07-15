@@ -21,21 +21,30 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://company/com/maven2")
+    }
+    mavenLocal()
 }
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-integration")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.integration:spring-integration-http")
     implementation("org.springframework.integration:spring-integration-jpa")
+    implementation("org.springframework.integration:spring-integration-file")
+
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+
     compileOnly("org.projectlombok:lombok")
 
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.integration:spring-integration-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    implementation("jakarta.mail:jakarta.mail-api:2.1.3")
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
