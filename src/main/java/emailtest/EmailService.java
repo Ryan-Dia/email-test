@@ -9,6 +9,9 @@ import jakarta.mail.internet.MimeMessage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,11 +43,17 @@ public class EmailService {
                 email.setFromAddress(((InternetAddress) fromAddrs[0]).getAddress());
             }
             email.setSubject(msg.getSubject());
-            email.setReceivedAt(
-                    msg.getReceivedDate().toInstant()
-                            .atZone(java.time.ZoneId.of("Asia/Seoul"))
-                            .toLocalDateTime()
-            );
+            Date receivedDate = msg.getReceivedDate();
+            if (receivedDate != null) {
+                email.setReceivedAt(
+                        receivedDate.toInstant()
+                                .atZone(ZoneId.of("Asia/Seoul"))
+                                .toLocalDateTime()
+                );
+            } else {
+                log.warn("메일에 ReceivedDate가 없어 현재 시간으로 대체합니다: {}", msg.getSubject());
+                email.setReceivedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+            }
 
             // 본문 파싱: text/plain 과 text/html 처리
             Object content = msg.getContent();
