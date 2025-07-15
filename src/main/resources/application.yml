@@ -17,4 +17,4 @@ spring:
 
 integration:
   file:
-    maildir: /home/Maildir/new
+    maildir: ./Maildir/new
