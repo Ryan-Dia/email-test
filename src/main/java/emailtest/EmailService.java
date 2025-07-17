@@ -137,8 +137,12 @@ public class EmailService {
         if (fullText == null || fullText.trim().isEmpty()) {
             return 0;
         }
-        String[] words = fullText.trim().split("\\s+"); // 공백 기준으로 단어 분리
-        return words.length / WORDS_PER_MINUTE;
+        // HTML 태그 제거 및 단어 수 세기
+        String textOnly = Jsoup.parse(fullText).text().trim();
+        int wordCount = textOnly.split("\\s+").length;
+        // 올림 계산
+        int minutes = (int) Math.ceil((double) wordCount / WORDS_PER_MINUTE);
+        return Math.max(minutes, 1);
     }
 
     private String sliceContents(String contents) {
