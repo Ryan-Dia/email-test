@@ -1,10 +1,18 @@
 package emailtest;
 
+import emailtest.article.Article;
+import emailtest.article.ArticleRepository;
+import emailtest.member.Member;
+import emailtest.member.MemberRepository;
+import emailtest.newsletter.Newsletter;
+import emailtest.newsletter.NewsletterRepository;
 import jakarta.mail.Address;
 import jakarta.mail.BodyPart;
+import jakarta.mail.Message;
+import jakarta.mail.Message.RecipientType;
+import jakarta.mail.MessagingException;
 import jakarta.mail.Multipart;
 import jakarta.mail.Session;
-import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,68 +21,63 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Optional;
 import java.util.Properties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 
-@Service
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class EmailService {
 
-    private final EmailRepository repository;
+    private static final int WORDS_PER_MINUTE = 200;
 
-    public EmailService(EmailRepository repository) {
-        this.repository = repository;
-    }
+    private final MemberRepository memberRepository;
+    private final ArticleRepository articleRepository;
+    private final NewsletterRepository newsletterRepository;
 
     /**
      * Maildir에서 읽어온 파일을 파싱 후 DB에 저장하고,
-     * 성공 시 해당 파일을 삭제합니다.
+     * 성공 시 해당 파일을 삭제한다.
      */
     public void processMailFile(File emlFile) {
         try (InputStream is = new FileInputStream(emlFile)) {
-            // JavaMail 세션 생성
             Session session = Session.getDefaultInstance(new Properties());
             MimeMessage msg = new MimeMessage(session, is);
 
             // Email 엔티티에 값 매핑
             Email email = new Email();
             Address[] fromAddrs = msg.getFrom();
-            if (fromAddrs != null && fromAddrs.length > 0) {
-                email.setFromAddress(((InternetAddress) fromAddrs[0]).getAddress());
+            if (fromAddrs == null && fromAddrs.length == 0) {
+                log.debug("From 주소가 없어 메일을 무시합니다: " + msg.getSubject());
+                return;
             }
-            email.setSubject(msg.getSubject());
-            Date receivedDate = msg.getReceivedDate();
-            if (receivedDate != null) {
-                email.setReceivedAt(
-                        receivedDate.toInstant()
-                                .atZone(ZoneId.of("Asia/Seoul"))
-                                .toLocalDateTime()
-                );
-            } else {
-                log.warn("메일에 ReceivedDate가 없어 현재 시간으로 대체합니다: {}", msg.getSubject());
-                email.setReceivedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
-            }
+            Address toAddress = Arrays.stream(msg.getRecipients(RecipientType.TO)).findFirst().get();
+            Member member = memberRepository.findByEmail(toAddress.getType())
+                    .orElse(null);
+            Newsletter newsletter = newsletterRepository.findByEmail(String.valueOf(Arrays.stream(fromAddrs).findFirst()))
+                    .orElse(null);
 
             // 본문 파싱: text/plain 과 text/html 처리
-            Object content = msg.getContent();
-            if (content instanceof String) {
-                email.setTextBody((String) content);
-            } else if (content instanceof Multipart) {
-                Multipart mp = (Multipart) content;
-                for (int i = 0; i < mp.getCount(); i++) {
-                    BodyPart part = mp.getBodyPart(i);
-                    if (part.isMimeType("text/plain")) {
-                        email.setTextBody((String) part.getContent());
-                    } else if (part.isMimeType("text/html")) {
-                        email.setHtmlBody((String) part.getContent());
-                    }
-                }
-            }
+            String contents = extractContents(msg);
 
-            // DB 저장
-            repository.save(email);
+            final Article article = Article.builder()
+                    .title(msg.getSubject())
+                    .contents(contents)
+                    .expectedReadTime(calculateReadingTimeFromText(contents))
+                    .contentsSummary(sliceContents(contents))
+                    .memberId(0L)
+                    .newsletterId(0L)
+                    .arrivedDateTime(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                    .build();
+
+            articleRepository.save(article);
+
             log.info("Saved email from={} subject={}", email.getFromAddress(), email.getSubject());
 
         } catch (Exception e) {
@@ -83,16 +86,67 @@ public class EmailService {
             return;
         }
 
+        deleteEmailFile(emlFile);
+    }
+
+    private String extractContents(MimeMessage msg) {
         try {
-            Files.delete(emlFile.toPath());
-            log.debug("Deleted processed mail file: {}", emlFile.getName());
+            Object content = msg.getContent();
+
+            if (content instanceof String) {
+                return (String) content;
+            }
+
+            if (content instanceof Multipart multipart) {
+                for (int i = 0; i < multipart.getCount(); i++) {
+                    BodyPart part = multipart.getBodyPart(i);
+                    if (part.isMimeType("text/html")) {
+                        return (String) part.getContent();
+                    }
+                }
+
+                for (int i = 0; i < multipart.getCount(); i++) {
+                    BodyPart part = multipart.getBodyPart(i);
+                    if (part.isMimeType("text/plain")) {
+                        return (String) part.getContent();
+                    }
+                }
+            }
+        } catch (IOException | MessagingException e) {
+            log.warn("본문 추출 중 오류 발생: {}", e.getMessage());
+        }
+
+        return "";
+    }
+
+    private void deleteEmailFile(File emailFile) {
+        try {
+            Files.delete(emailFile.toPath());
+            log.debug("Deleted processed mail file: {}", emailFile.getName());
         } catch (IOException e) {
             log.warn("Failed to delete processed mail file: {} - exists: {}, canWrite: {}, isFile: {}, Reason: {}",
-                    emlFile.getAbsolutePath(),
-                    emlFile.exists(),
-                    emlFile.canWrite(),
-                    emlFile.isFile(),
+                    emailFile.getAbsolutePath(),
+                    emailFile.exists(),
+                    emailFile.canWrite(),
+                    emailFile.isFile(),
                     e.getMessage());
         }
+    }
+
+    private int calculateReadingTimeFromText(String fullText) {
+        if (fullText == null || fullText.trim().isEmpty()) {
+            return 0;
+        }
+        String[] words = fullText.trim().split("\\s+"); // 공백 기준으로 단어 분리
+        return words.length / WORDS_PER_MINUTE;
+    }
+
+    private String sliceContents(String contents) {
+        if (contents == null || contents.isBlank()) {
+            return "";
+        }
+
+        String textOnly = Jsoup.parse(contents).text(); // HTML 제거
+        return textOnly.length() <= 100 ? textOnly : textOnly.substring(0, 100) + "...";
     }
 }

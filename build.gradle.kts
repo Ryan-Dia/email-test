@@ -48,6 +48,8 @@ dependencies {
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
+
+    implementation("org.jsoup:jsoup:1.21.1")
 }
 
 tasks.withType<Test> {
