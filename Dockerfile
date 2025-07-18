@@ -10,6 +10,11 @@ RUN addgroup -g ${APP_GID} ${APP_USER} \
 WORKDIR /app
 COPY build/libs/*.jar app.jar
 
+# entrypoint 스크립트 복사 및 실행권한 부여
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER ${APP_USER}
 
-ENTRYPOINT ["java","-jar","/app/app.jar","--spring.profiles.active=docker"]
+# ENTRYPOINT ["java","-jar","/app/app.jar","--spring.profiles.active=docker"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

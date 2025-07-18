@@ -17,7 +17,7 @@ public class EmailController {
 
     private final EmailRepository repository;
 
-    public EmailController(EmailRepository repository) {
+    public EmailController(@RequestParam EmailRepository repository) {
         this.repository = repository;
     }
 
